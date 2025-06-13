@@ -6,6 +6,9 @@ from io import BytesIO
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
+from datetime import datetime
+import csv
+import os
 
 # --- Streamlit Config ---
 st.set_page_config(page_title="VRA Form Generator", layout="wide")
@@ -36,7 +39,6 @@ elif auth_status is None:
 elif auth_status:
     authenticator.logout("Logout", "sidebar")
     st.sidebar.success(f"Welcome {name}")
-
     st.title("📄 Vulnerability Risk Assessment (VRA) Form")
 
     # --- File Uploads ---
@@ -158,10 +160,23 @@ elif auth_status:
                     doc.save(report_buffer)
                     report_buffer.seek(0)
 
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"VRA_Form_{selected_appcode}_{timestamp}.docx"
+
                     st.success("✅ Report generated successfully!")
                     st.download_button(
                         label="📥 Download VRA Form",
                         data=report_buffer,
-                        file_name=f"VRA_Form_{selected_appcode}.docx",
+                        file_name=filename,
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
+
+                    # --- Save to vra_history.csv ---
+                    history_file = "vra_history.csv"
+                    file_exists = os.path.isfile(history_file)
+
+                    with open(history_file, "a", newline="") as csvfile:
+                        writer = csv.writer(csvfile)
+                        if not file_exists:
+                            writer.writerow(["Timestamp", "Username", "AppCode", "FileName"])
+                        writer.writerow([datetime.now().isoformat(), username, selected_appcode, filename])
